@@ -1,0 +1,2 @@
+make: 
+	gprbuild ./yarpnc.gpr
