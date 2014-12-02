@@ -16,13 +16,13 @@
 -- Copyright (C) Martino Pilia, 2014
 
 package body Components is
-	procedure Input_Number_Reset(D: in out Input_Number_Type) is
-	begin
-		D.Int := (null, 0);
-		D.Decimal := (null, 0);
-		D.Exponent := (null, 0);
+    procedure Input_Number_Reset(D: in out Input_Number_Type) is
+    begin
+        D.Int := (null, 0);
+        D.Decimal := (null, 0);
+        D.Exponent := (null, 0);
         D.Sign_Base := "+";
         D.Sign_Exp := "+";
         D.Part := Int_Part;
-	end Input_Number_Reset;
+    end Input_Number_Reset;
 end Components;
