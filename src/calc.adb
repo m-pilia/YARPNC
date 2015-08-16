@@ -15,11 +15,10 @@
 --
 -- Copyright (C) Martino Pilia, 2014
 
+with Ada.Strings.UTF_Encoding; use Ada.Strings.UTF_Encoding;
 with Ada.Text_IO;
-with Calls;
 with Components; use Components;
 with Glib; use Glib;
-with Global_Vars; use Global_Vars;
 with Gtk.Alignment;
 with Gtk.Box;
 with Gtk.Button;
@@ -33,8 +32,11 @@ with Gtk.Widget;
 with Gtk.Window;
 
 procedure Calc is
+   
+    -- array type of 1-character strings
+    type String_Array is array (Integer range <>) of aliased String(1..1);
+   
     Main_Window: Gtk.Window.Gtk_Window;
-    type Button_Array is array (Integer range <>) of Gtk.Button.Gtk_Button;
     Digit_Buttons: Button_Array (0..9);
     Enter_Button: Gtk.Button.Gtk_Button;
     Enter_Label: constant String := "Enter";
@@ -58,8 +60,9 @@ procedure Calc is
     Display_Frame: Gtk.Frame.Gtk_Frame;
     Display_Box: Gtk.Box.Gtk_Vbox;
     Operator_Labels: constant String_Array (1..4) := ("+", "-", "*", "/");
-    Function_Labels: constant array (Integer range 1..18) of String (1..5) := (
-        "     ", "     ", " drop", "x<->y", "lastx", "clear", --  1..6
+    Function_Labels: constant array (Integer range 1..18) 
+        of UTF_8_String (1..5) := (
+        "     ", "     ", " drop", "x↔y", "lastx", "clear", --  1..6
         "sin  ", " cos ", " tan ", " hyp ", " f^-1", " rad ", --  7..12
         "sqrt ", " y^x ", " exp ", " ln  ", "  !  ", " pi  "  -- 13..18
     );
@@ -73,11 +76,11 @@ begin
     Handlers.Connect(
         Main_Window,
         "destroy",
-        Handlers.To_Marshaller(Calls.Destroy'Access));
+        Handlers.To_Marshaller(Components.Destroy'Access));
     Key_Handlers.Connect(
         Main_Window,
         "key_press_event",
-        Key_Handlers.To_Marshaller(Calls.Keyboard_Input'Access));
+        Key_Handlers.To_Marshaller(Components.Keyboard_Input'Access));
 
     Gtk.Table.Gtk_New(Keypad, 4, 3, True);
     Gtk.Table.Gtk_New(Opspad, 2, 2, True);
@@ -90,8 +93,8 @@ begin
         User_Callback_String.Connect(
             Digit_Buttons(i),
             "clicked",
-            User_Callback_String.To_Marshaller(Calls.Add_Digit'Access),
-            User_Data => Digit_Labels(i)'Access);
+            User_Callback_String.To_Marshaller(Components.Add_Digit'Access),
+            User_Data => Digit_Labels(i)'Unrestricted_Access);
         Gtk.Table.Attach_Defaults(
             Keypad,
             Digit_Buttons(i),
@@ -116,8 +119,8 @@ begin
     User_Callback_String.Connect(
         Digit_Buttons(0),
         "clicked",
-        User_Callback_String.To_Marshaller(Calls.Add_Digit'Access),
-        User_Data => Digit_Labels(0)'Access);
+        User_Callback_String.To_Marshaller(Components.Add_Digit'Access),
+        User_Data => Digit_Labels(0)'Unrestricted_Access);
     Gtk.Button.Set_Can_Focus(Digit_Buttons(0), False);
 
     -- add dot
@@ -130,7 +133,7 @@ begin
         Guint(2),
         Guint(3),
         Guint(4));
-    Dot_Button.On_Clicked(Calls.Dot'Access);
+    Dot_Button.On_Clicked(Components.Dot'Access);
     Gtk.Button.Set_Can_Focus(Dot_Button, False);
 
     -- add sign
@@ -143,7 +146,7 @@ begin
         Guint(3),
         Guint(3),
         Guint(4));
-    Sign_Button.On_Clicked(Calls.Sign'Access);
+    Sign_Button.On_Clicked(Components.Sign_Change'Access);
     Gtk.Button.Set_Can_Focus(Sign_Button, False);
 
     -- add enter
@@ -156,7 +159,7 @@ begin
         Guint(2),
         Guint(3),
         Guint(4));
-    Enter_Button.On_Clicked(Calls.Enter'Access);
+    Enter_Button.On_Clicked(Components.Enter'Access);
     Gtk.Button.Set_Can_Focus(Enter_Button, False);
 
     -- add exp
@@ -169,7 +172,7 @@ begin
         Guint(1),
         Guint(0),
         Guint(1));
-    Exp_Button.On_Clicked(Calls.Exp'Access);
+    Exp_Button.On_Clicked(Components.Exp'Access);
     Gtk.Button.Set_Can_Focus(Exp_Button, False);
 
     -- add bks
@@ -182,7 +185,7 @@ begin
         Guint(2),
         Guint(0),
         Guint(1));
-    Bks_Button.On_Clicked(Calls.Bks'Access);
+    Bks_Button.On_Clicked(Components.Bks'Access);
     Gtk.Button.Set_Can_Focus(Bks_Button, False);
 
     -- add operators
@@ -198,10 +201,10 @@ begin
             Guint(3 - i / 3));
         Gtk.Button.Set_Can_Focus(Operator_Buttons(i), False);
     end loop;
-    Operator_Buttons(1).On_Clicked(Calls.Add'Access);
-    Operator_Buttons(2).On_Clicked(Calls.Sub'Access);
-    Operator_Buttons(3).On_Clicked(Calls.Mol'Access);
-    Operator_Buttons(4).On_Clicked(Calls.Div'Access);
+    Operator_Buttons(1).On_Clicked(Components.Add'Access);
+    Operator_Buttons(2).On_Clicked(Components.Sub'Access);
+    Operator_Buttons(3).On_Clicked(Components.Mol'Access);
+    Operator_Buttons(4).On_Clicked(Components.Div'Access);
     
     -- add function buttons
     for i in 1..18 loop
@@ -216,22 +219,22 @@ begin
             Guint((i - 1) / 6 + 1));
         Gtk.Button.Set_Can_Focus(Function_Buttons(i), False);
     end loop;
-    Function_Buttons(3).On_Clicked(Calls.Drop'Access);
-    Function_Buttons(4).On_Clicked(Calls.Commute'Access);
-    Function_Buttons(5).On_Clicked(Calls.LastX'Access);
-    Function_Buttons(6).On_Clicked(Calls.Clear'Access);
-    Function_Buttons(7).On_Clicked(Calls.Sin'Access);
-    Function_Buttons(8).On_Clicked(Calls.Cos'Access);
-    Function_Buttons(9).On_Clicked(Calls.Tan'Access);
-    Function_Buttons(10).On_Clicked(Calls.Hyp'Access);
-    Function_Buttons(11).On_Clicked(Calls.Inv'Access);
-    Function_Buttons(12).On_Clicked(Calls.Angle_Type'Access);
-    Function_Buttons(13).On_Clicked(Calls.Sqrt'Access);
-    Function_Buttons(14).On_Clicked(Calls.YeX'Access);
-    Function_Buttons(15).On_Clicked(Calls.Exponential'Access);
-    Function_Buttons(16).On_Clicked(Calls.Log'Access);
-    Function_Buttons(17).On_Clicked(Calls.Factorial'Access);
-    Function_Buttons(18).On_Clicked(Calls.Pi'Access);
+    Function_Buttons(3).On_Clicked(Components.Drop'Access);
+    Function_Buttons(4).On_Clicked(Components.Commute'Access);
+    Function_Buttons(5).On_Clicked(Components.LastX'Access);
+    Function_Buttons(6).On_Clicked(Components.Clear'Access);
+    Function_Buttons(7).On_Clicked(Components.Sin'Access);
+    Function_Buttons(8).On_Clicked(Components.Cos'Access);
+    Function_Buttons(9).On_Clicked(Components.Tan'Access);
+    Function_Buttons(10).On_Clicked(Components.Hyp'Access);
+    Function_Buttons(11).On_Clicked(Components.Inv'Access);
+    Function_Buttons(12).On_Clicked(Components.Angle_Change'Access);
+    Function_Buttons(13).On_Clicked(Components.Sqrt'Access);
+    Function_Buttons(14).On_Clicked(Components.YeX'Access);
+    Function_Buttons(15).On_Clicked(Components.Exponential'Access);
+    Function_Buttons(16).On_Clicked(Components.Log'Access);
+    Function_Buttons(17).On_Clicked(Components.Factorial'Access);
+    Function_Buttons(18).On_Clicked(Components.Pi'Access);
 
     Gtk.Table.Show(Keypad);
     Gtk.Table.Show(Opspad);
